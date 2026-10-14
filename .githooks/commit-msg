@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+header=$(head -n 1 "$1")
+length=$(printf '%s' "$header" | wc -m)
+if [ "$length" -ge 120 ]; then
+    printf 'Commit header must be shorter than 120 characters (got %s).\n' "$(printf '%s' "$length" | tr -d ' ')" >&2
+    exit 1
+fi
+
+if ! printf '%s\n' "$header" | grep -Eq '^[a-z][a-z0-9-]*(\([^()[:space:]]+\))?!?: [^[:space:]].*$'; then
+    printf 'Use Conventional Commits: type(scope)!: description (scope and ! are optional).\nExample: feat(api): add health endpoint\n' >&2
+    exit 1
+fi
