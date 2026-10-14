@@ -57,7 +57,7 @@ jobs:
         run: |
           gcloud run services update "$SERVICE" --project="$PROJECT" --region="$REGION" \
             --image="$IMAGE" --service-account="$RUNTIME_ACCOUNT" \
-            --cpu=1 --memory=512Mi --port=8080 --min=1 --max=1 --no-cpu-throttling \
+            --cpu=1 --memory=512Mi --port=8080 --min=0 --max=1 --no-cpu-throttling \
             --update-env-vars=GONKA_REST_URL=https://node1.gonka.ai:8443/chain-api,GONKA_RPC_URL=https://node1.gonka.ai:8443/chain-rpc \
             --quiet
           gcloud run services update-traffic "$SERVICE" --project="$PROJECT" --region="$REGION" --to-latest --quiet
