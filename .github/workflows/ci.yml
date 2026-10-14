@@ -1,5 +1,5 @@
 name: Rust
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
@@ -9,3 +9,54 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup show active-toolchain
       - run: ./scripts/check
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: cloud-run-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      REPOSITORY: ${{ vars.GAR_REPOSITORY }}
+      SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+      RUNTIME_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
+      WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      DEPLOY_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate configuration
+        run: |
+          for name in PROJECT REGION REPOSITORY SERVICE RUNTIME_ACCOUNT WIF_PROVIDER DEPLOY_ACCOUNT; do
+            test -n "${!name}" || { echo "Missing variable: $name"; exit 1; }
+          done
+          echo "IMAGE=$REGION-docker.pkg.dev/$PROJECT/$REPOSITORY/$SERVICE:$GITHUB_SHA" >> "$GITHUB_ENV"
+      - name: Build image before requesting short-lived credentials
+        run: docker build --platform linux/amd64 --tag "$IMAGE" .
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_ACCOUNT }}
+          project_id: ${{ env.PROJECT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Verify existing service and publish image
+        run: |
+          gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" >/dev/null
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker push "$IMAGE"
+      - name: Update Cloud Run without changing IAM
+        run: |
+          gcloud run services update "$SERVICE" --project="$PROJECT" --region="$REGION" \
+            --image="$IMAGE" --service-account="$RUNTIME_ACCOUNT" \
+            --cpu=1 --memory=512Mi --port=8080 --min=1 --max=1 --no-cpu-throttling \
+            --update-env-vars=GONKA_REST_URL=https://node1.gonka.ai:8443/chain-api,GONKA_RPC_URL=https://node1.gonka.ai:8443/chain-rpc \
+            --quiet
+          gcloud run services update-traffic "$SERVICE" --project="$PROJECT" --region="$REGION" --to-latest --quiet
+          url=$(gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format='value(status.url)')
+          echo "Cloud Run: $url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
