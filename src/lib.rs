@@ -3,6 +3,7 @@ use axum::{Router, routing::get};
 mod api;
 pub mod cache;
 pub mod chain;
+pub mod collector;
 pub mod config;
 pub mod deal;
 pub mod factory;
