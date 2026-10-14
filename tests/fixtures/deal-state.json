@@ -1,0 +1,26 @@
+{
+  "data": {
+    "status": "releasing",
+    "refund_reason": null,
+    "buyer": "gonka1ww2p5wv8plwte5tr00spkv0vt2hzr9s9kppd0x",
+    "recipient_locked": true,
+    "work_ngonka": "0",
+    "reward_ngonka": "607284849111",
+    "total_claim_ngonka": "607284849111",
+    "buyer_entitlement_ngonka": "607284849111",
+    "host_entitlement_ngonka": "0",
+    "gnk_release_policy": {
+      "proportional": {
+        "buyer_share_numerator": "607284849111",
+        "share_denominator": "607284849111"
+      }
+    },
+    "released_total_ngonka": "0",
+    "buyer_released_ngonka": "0",
+    "host_released_ngonka": "0",
+    "gross_usdt": "121456969",
+    "fee_usdt": "1821854",
+    "host_net_usdt": "119635115",
+    "buyer_refund_usdt": "18543031"
+  }
+}
