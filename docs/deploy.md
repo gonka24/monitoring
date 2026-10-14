@@ -6,7 +6,7 @@
 
 ## GitHub Actions
 
-Workflow `Rust` проверяет код при push и pull request. После успешного check
+Workflow `Rust` проверяет код в pull request и при push в `main`, без двойных запусков на ветках PR. После успешного check
 на `main` (push или ручной Run workflow) собирает Docker-образ linux/amd64,
 публикует его с тегом commit SHA и обновляет существующий сервис Cloud Run.
 Деплои выполняются последовательно; pull request не получает OIDC-доступ.
