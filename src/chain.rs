@@ -42,6 +42,13 @@ impl ChainClient {
         self.query(address, json!({"state": {}})).await
     }
 
+    /// Reads immutable conditions of a Deal.
+    /// # Errors
+    /// Rejects malformed addresses and upstream failures.
+    pub async fn config(&self, address: &str) -> Result<crate::config::DealConfig, ChainError> {
+        self.query(address, json!({"config": {}})).await
+    }
+
     /// Reads one registry page from the configured pilot Factory.
     /// # Errors
     /// Returns upstream errors; each page contains at most 50 deals.
