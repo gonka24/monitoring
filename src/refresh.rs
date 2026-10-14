@@ -1,9 +1,9 @@
-use crate::{cache::Cache, chain::ChainClient, collector::collect};
+use crate::{cache::Cache, chain::ChainClient, collector::collect, rpc::RpcClient};
 use std::{future::Future, time::Duration};
 use tokio::time::{MissedTickBehavior, interval, timeout};
 
-pub async fn run(client: ChainClient, cache: Cache) {
-    refresh(cache, || collect(&client)).await;
+pub async fn run(client: ChainClient, rpc: RpcClient, cache: Cache) {
+    refresh(cache, || collect(&client, &rpc)).await;
 }
 
 async fn refresh<F, T>(cache: Cache, mut collect: F)
@@ -48,6 +48,7 @@ mod tests {
                     return Err(crate::chain::ChainError::Upstream);
                 }
                 Ok(Snapshot {
+                    histories: [("deal".into(), vec![serde_json::json!(attempt)])].into(),
                     deals: std::collections::BTreeMap::new(),
                     updated_at: now(),
                 })
@@ -67,6 +68,11 @@ mod tests {
             tokio::task::yield_now().await;
             assert_eq!(calls.load(Ordering::SeqCst), count);
             assert_eq!(cache.read().map(|(_, failed)| failed), Some(stale));
+            let expected = if count == 4 { 3 } else { 0 };
+            assert_eq!(
+                cache.read().map(|(s, _)| s.histories["deal"][0].clone()),
+                Some(serde_json::json!(expected))
+            );
         }
         worker.abort();
     }

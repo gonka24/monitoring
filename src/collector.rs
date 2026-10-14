@@ -1,7 +1,8 @@
 use crate::{
     cache::{Snapshot, now},
     chain::{ChainClient, ChainError},
-    factory,
+    factory, history,
+    rpc::RpcClient,
 };
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,15 +11,20 @@ use std::collections::{BTreeMap, BTreeSet};
 /// The timestamp marks collection start; no partial result is published.
 /// # Errors
 /// Rejects upstream failures, inconsistent identity/pagination and more than 1000 deals.
-pub async fn collect(client: &ChainClient) -> Result<Snapshot, ChainError> {
+pub async fn collect(client: &ChainClient, rpc: &RpcClient) -> Result<Snapshot, ChainError> {
     let updated_at = now();
     let mut deals = BTreeMap::new();
+    let mut histories = BTreeMap::new();
     let mut addresses = BTreeSet::new();
     let mut after = None;
     loop {
         let page = client.deals(after).await?;
         if page.deals.is_empty() {
-            return Ok(Snapshot { deals, updated_at });
+            return Ok(Snapshot {
+                deals,
+                histories,
+                updated_at,
+            });
         }
         for deal in page.deals {
             if deals.len() >= 1000
@@ -32,6 +38,8 @@ pub async fn collect(client: &ChainClient) -> Result<Snapshot, ChainError> {
                 return Err(ChainError::Upstream);
             }
             let state = client.state(&deal.address).await?;
+            let events = history::collect(rpc, &deal.address).await?;
+            histories.insert(deal.address.clone(), events);
             deals.insert(
                 deal.id,
                 json!({
