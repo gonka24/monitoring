@@ -12,3 +12,8 @@ Factory `gonka1ea2s57dvs06fr5mjzmna9w9vt0xylrna5cjtmzr5h72vkrza3xxsp7eayy`,
 
 `deal-config.json` — реальный config той же сделки и REST endpoint,
 высота 6554676, 2026-10-14 17:31:04 UTC; суммы сохранены строками.
+
+`deal-funded.json` — один неизменённый event из реальной tx, не полный ответ RPC.
+Источник: `https://node1.gonka.ai:8443/chain-rpc/tx_search`, запрос execute._contract_address для той же сделки, 2026-10-14.
+Tx `76A75CDE1C93E3C32B927F340365F30B8D485A678F95A5665D87C2265BCC16CD`,
+высота 6519973, tx_result.code=0, индекс события в tx_result.events — 11 (с нуля).
