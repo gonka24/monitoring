@@ -1,5 +1,6 @@
 use axum::{Router, routing::get};
 
+pub mod chain;
 pub mod deal;
 
 /// Factory: assembles the HTTP application independently of its server.
