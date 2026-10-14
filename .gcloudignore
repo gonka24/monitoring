@@ -1,0 +1,8 @@
+.gcloudignore
+.git
+.github
+.vscode
+target
+*.local.md
+.env
+.env.*
