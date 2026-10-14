@@ -14,7 +14,7 @@ async fn returns_deal_and_maps_errors() -> Result<(), Box<dyn std::error::Error>
     let client = ChainClient::new(&format!("http://{}", listener.local_addr()?))?;
     let mock = Router::new().fallback(get(|| async { include_str!("fixtures/deal-state.json") }));
     let server = tokio::spawn(async move { axum::serve(listener, mock).await });
-    let app = create_app(client);
+    let app = create_app(client, monitoring::cache::Cache::default());
     let request = |address| {
         Request::builder()
             .uri(format!("/v1/deals/{address}"))
