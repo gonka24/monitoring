@@ -4,16 +4,14 @@ use axum::{
 };
 use monitoring::{
     cache::{Cache, Snapshot},
-    chain::ChainClient,
     create_app,
 };
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn lists_registry_and_rejects_bad_cursor() -> Result<(), Box<dyn std::error::Error>> {
-    let client = ChainClient::new("http://127.0.0.1:1")?;
     let cache = Cache::default();
-    let app = create_app(client, cache.clone());
+    let app = create_app(cache.clone());
     let request = Request::builder().uri("/v1/deals").body(Body::empty())?;
     assert_eq!(
         app.clone().oneshot(request).await?.status(),
