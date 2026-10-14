@@ -3,6 +3,7 @@ use axum::{Router, routing::get};
 mod api;
 pub mod chain;
 pub mod deal;
+pub mod factory;
 
 /// Factory: assembles the HTTP application independently of its server.
 pub fn create_app(client: chain::ChainClient) -> Router {
