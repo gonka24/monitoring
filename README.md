@@ -1,5 +1,7 @@
 # Monitoring
 
+Справочник возможностей, полей и примеров запросов: [HTTP API](docs/api.md).
+
 `GET /v1/deals/{address}` возвращает состояние, участников и условия сделки из кэша Factory.
 Запуск: `cargo run`; проверка: `curl http://localhost:8080/v1/deals/gonka1kxlsujae2mgahx2grd8hq8clhsk2zwsqk8q8esx6n2cpj426sdts9cdejs`.
 `GONKA_REST_URL` задаёт REST base URL (по умолчанию `https://node1.gonka.ai:8443/chain-api`).
