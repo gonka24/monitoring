@@ -20,6 +20,7 @@ pub fn create_app(cache: cache::Cache) -> Router {
         .route("/", get(|| async { "Hello, world!\n" }))
         .route("/healthz", get(|| async { "ok\n" }))
         .route("/v1/deals/{address}", get(api::deal))
+        .route("/v1/deals/{address}/events", get(api::events))
         .route("/v1/deals", get(registry_api::list))
         .with_state(cache)
 }
