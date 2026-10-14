@@ -10,6 +10,7 @@ pub mod event;
 pub mod factory;
 pub mod refresh;
 mod registry_api;
+pub mod rpc;
 pub mod transaction;
 
 /// Factory: assembles the HTTP application independently of its server.
