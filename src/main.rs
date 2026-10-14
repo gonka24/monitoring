@@ -1,8 +1,17 @@
 use std::{env, error::Error, net::Ipv4Addr};
 use tokio::net::TcpListener;
 
+fn main() -> Result<(), Box<dyn Error>> {
+    match dotenvy::from_path(".env") {
+        Ok(()) => {}
+        Err(error) if error.not_found() => {}
+        Err(_) => return Err("Failed to load .env".into()),
+    }
+    run()
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn run() -> Result<(), Box<dyn Error>> {
     let port = match env::var("PORT") {
         Ok(value) => value.parse::<u16>()?,
         Err(env::VarError::NotPresent) => 8080,
