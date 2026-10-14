@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+export PATH="$HOME/.cargo/bin:$PATH"
+if ! git diff --quiet; then
+    printf 'Commit checks require no unstaged changes. Stage or stash them first.\n' >&2
+    exit 1
+fi
+exec ./scripts/check
