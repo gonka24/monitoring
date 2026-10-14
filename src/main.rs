@@ -19,7 +19,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await?;
     eprintln!("Listening on {}", listener.local_addr()?);
-    axum::serve(listener, monitoring::create_app())
+    let endpoint = match env::var("GONKA_REST_URL") {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => "https://node1.gonka.ai:8443/chain-api".to_owned(),
+        Err(error) => return Err(error.into()),
+    };
+    let client = monitoring::chain::ChainClient::new(&endpoint)?;
+    axum::serve(listener, monitoring::create_app(client))
         .with_graceful_shutdown(shutdown())
         .await?;
     Ok(())

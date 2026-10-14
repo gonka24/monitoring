@@ -11,7 +11,8 @@ async fn public_routes() -> Result<(), Box<dyn std::error::Error>> {
         ("/healthz", StatusCode::OK, "ok\n"),
         ("/missing", StatusCode::NOT_FOUND, ""),
     ] {
-        let response = monitoring::create_app()
+        let client = monitoring::chain::ChainClient::new("http://127.0.0.1:1")?;
+        let response = monitoring::create_app(client)
             .oneshot(Request::builder().uri(path).body(Body::empty())?)
             .await?;
         assert_eq!(response.status(), status);
