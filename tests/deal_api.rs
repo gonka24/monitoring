@@ -27,6 +27,7 @@ async fn returns_deal_and_maps_errors() -> Result<(), Box<dyn std::error::Error>
     let mut record = fixture["data"].clone();
     record["address"] = address.into();
     cache.publish(Snapshot {
+        histories: std::collections::BTreeMap::new(),
         deals: [(1, record)].into(),
         updated_at: now(),
     });

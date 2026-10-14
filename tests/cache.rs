@@ -6,6 +6,7 @@ fn preserves_snapshot_after_failed_refresh() {
     let cache = Cache::default();
     assert!(cache.read().is_none());
     cache.publish(Snapshot {
+        histories: BTreeMap::new(),
         deals: BTreeMap::new(),
         updated_at: now(),
     });
@@ -20,11 +21,13 @@ fn preserves_snapshot_after_failed_refresh() {
     assert!(stale);
     assert!(std::sync::Arc::ptr_eq(&old, &current));
     cache.publish(Snapshot {
+        histories: BTreeMap::new(),
         deals: BTreeMap::new(),
         updated_at: 0,
     });
     assert!(cache.read().is_some_and(|(_, stale)| stale));
     cache.publish(Snapshot {
+        histories: BTreeMap::new(),
         deals: BTreeMap::new(),
         updated_at: now(),
     });

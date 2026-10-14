@@ -1,12 +1,22 @@
 use axum::{Json, Router, http::Uri, routing::get};
 use base64::{Engine, engine::general_purpose::STANDARD};
-use monitoring::{chain::ChainClient, collector::collect};
+use monitoring::{chain::ChainClient, collector::collect, rpc::RpcClient};
 use serde_json::{Value, json};
 
 #[tokio::test]
 async fn collects_pages_and_rejects_inconsistent_data() -> Result<(), Box<dyn std::error::Error>> {
-    for mode in 0..5 {
+    for mode in 0..6 {
         let mock = Router::new().fallback(get(move |uri: Uri| async move {
+            if uri.path() == "/tx_search" {
+                let event: Value = serde_json::from_str(include_str!("fixtures/deal-funded.json"))
+                    .unwrap_or_default();
+                return Json(if mode == 5 {
+                    json!({"error": {"code": -1}})
+                } else {
+                    json!({"result": {"total_count": "1", "txs": [{"hash": "A", "height": "1",
+                        "tx_result": {"code": 0, "events": [event]}}]}})
+                });
+            }
             let encoded = uri.path().rsplit('/').next().unwrap_or_default();
             let query: Value =
                 serde_json::from_slice(&STANDARD.decode(encoded).unwrap_or_default())
@@ -35,12 +45,20 @@ async fn collects_pages_and_rejects_inconsistent_data() -> Result<(), Box<dyn st
         }));
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
         let client = ChainClient::new(&format!("http://{}", listener.local_addr()?))?;
+        let rpc = RpcClient::new(&format!("http://{}", listener.local_addr()?))?;
         let server = tokio::spawn(async move { axum::serve(listener, mock).await });
-        let result = collect(&client).await;
+        let result = collect(&client, &rpc).await;
         server.abort();
         assert_eq!(result.is_ok(), mode == 0);
         if let Ok(snapshot) = result {
             assert_eq!(snapshot.deals.len(), 1);
+            let address = snapshot.deals[&1]["address"]
+                .as_str()
+                .ok_or("address missing")?;
+            assert_eq!(
+                snapshot.histories[address][0]["event"]["type"],
+                "wasm-deal_funded"
+            );
             assert_eq!(snapshot.deals[&1]["buyer_budget_micro_usdt"], "140000000");
             assert_eq!(snapshot.deals[&1]["status"], "releasing");
         }

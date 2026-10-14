@@ -19,6 +19,7 @@ async fn lists_registry_and_rejects_bad_cursor() -> Result<(), Box<dyn std::erro
     );
     let updated_at = monitoring::cache::now();
     cache.publish(Snapshot {
+        histories: std::collections::BTreeMap::new(),
         deals: (1..=51)
             .map(|id| (id, serde_json::json!({"address": "test"})))
             .collect(),

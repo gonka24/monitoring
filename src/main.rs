@@ -25,8 +25,14 @@ async fn run() -> Result<(), Box<dyn Error>> {
         Err(error) => return Err(error.into()),
     };
     let client = monitoring::chain::ChainClient::new(&endpoint)?;
+    let rpc_endpoint = match env::var("GONKA_RPC_URL") {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => "https://node1.gonka.ai:8443/chain-rpc".to_owned(),
+        Err(error) => return Err(error.into()),
+    };
+    let rpc = monitoring::rpc::RpcClient::new(&rpc_endpoint)?;
     let cache = monitoring::cache::Cache::default();
-    let worker = tokio::spawn(monitoring::refresh::run(client, cache.clone()));
+    let worker = tokio::spawn(monitoring::refresh::run(client, rpc, cache.clone()));
     let result = axum::serve(listener, monitoring::create_app(cache))
         .with_graceful_shutdown(shutdown())
         .await;

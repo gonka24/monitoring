@@ -7,6 +7,7 @@ use std::{
 
 pub struct Snapshot {
     pub deals: BTreeMap<u64, Value>,
+    pub histories: BTreeMap<String, Vec<Value>>,
     pub updated_at: u64,
 }
 
