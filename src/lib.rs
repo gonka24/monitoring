@@ -1,6 +1,7 @@
 use axum::{Router, routing::get};
 
 mod api;
+pub mod cache;
 pub mod chain;
 pub mod config;
 pub mod deal;
