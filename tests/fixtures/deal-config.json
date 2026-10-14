@@ -1,0 +1,15 @@
+{
+  "data": {
+    "factory": "gonka1ea2s57dvs06fr5mjzmna9w9vt0xylrna5cjtmzr5h72vkrza3xxsp7eayy",
+    "host": "gonka1hvk3t5c4hzn0q8q3lvg6l7k4dfvfa5xqj4a66m",
+    "deal_address": "gonka1kxlsujae2mgahx2grd8hq8clhsk2zwsqk8q8esx6n2cpj426sdts9cdejs",
+    "target_epoch": 423,
+    "price_micro_usdt_per_gnk": "200000",
+    "buyer_budget_micro_usdt": "140000000",
+    "funded_capacity_ngonka": "700000000000",
+    "settlement_cw20": "gonka15ggwj9un6qrmu4nj5ev6l7kpdcr00td03ff2mmj4cyhl8u8vjd2qnl3hgk",
+    "fee_recipient": "gonka17srut7dsa937mrttq0v0euexgkw00h04w49tjj",
+    "fee_bps": 150,
+    "pinned_gonka_sha": "379bebced638aeb5e6077bfd51c986f898443832"
+  }
+}
