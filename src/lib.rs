@@ -7,6 +7,7 @@ pub mod collector;
 pub mod config;
 pub mod deal;
 pub mod factory;
+pub mod refresh;
 mod registry_api;
 
 /// Factory: assembles the HTTP application independently of its server.
