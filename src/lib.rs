@@ -1,5 +1,7 @@
 use axum::{Router, routing::get};
 
+pub mod deal;
+
 /// Factory: assembles the HTTP application independently of its server.
 pub fn create_app() -> Router {
     Router::new()
