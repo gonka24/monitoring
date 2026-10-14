@@ -1,5 +1,7 @@
 use crate::deal::DealState;
-use serde::Deserialize;
+use base64::{Engine, engine::general_purpose::STANDARD};
+use serde::{Deserialize, de::DeserializeOwned};
+use serde_json::{Value, json};
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -15,8 +17,8 @@ pub enum ChainError {
 }
 
 #[derive(Deserialize)]
-struct StateResponse {
-    data: DealState,
+struct SmartResponse<T> {
+    data: T,
 }
 
 impl ChainClient {
@@ -37,6 +39,25 @@ impl ChainClient {
     /// # Errors
     /// Rejects malformed addresses and transport, HTTP or JSON failures.
     pub async fn state(&self, address: &str) -> Result<DealState, ChainError> {
+        self.query(address, json!({"state": {}})).await
+    }
+
+    /// Reads one registry page from the configured pilot Factory.
+    /// # Errors
+    /// Returns upstream errors; each page contains at most 50 deals.
+    pub async fn deals(&self, after: Option<u64>) -> Result<crate::factory::DealPage, ChainError> {
+        self.query(
+            crate::factory::ADDRESS,
+            json!({"list_deals": {"start_after": after, "limit": 50}}),
+        )
+        .await
+    }
+
+    pub(crate) async fn query<T: DeserializeOwned>(
+        &self,
+        address: &str,
+        query: Value,
+    ) -> Result<T, ChainError> {
         if address.len() != 64
             || !address.starts_with("gonka1")
             || !address[6..]
@@ -45,8 +66,9 @@ impl ChainClient {
         {
             return Err(ChainError::InvalidAddress);
         }
+        let query = STANDARD.encode(query.to_string());
         let url = format!(
-            "{}/cosmwasm/wasm/v1/contract/{address}/smart/eyJzdGF0ZSI6e319",
+            "{}/cosmwasm/wasm/v1/contract/{address}/smart/{query}",
             self.endpoint
         );
         let response = self
@@ -56,7 +78,7 @@ impl ChainClient {
             .await
             .and_then(reqwest::Response::error_for_status)
             .map_err(|_| ChainError::Upstream)?;
-        let body: StateResponse = response.json().await.map_err(|_| ChainError::Upstream)?;
+        let body: SmartResponse<T> = response.json().await.map_err(|_| ChainError::Upstream)?;
         Ok(body.data)
     }
 }
