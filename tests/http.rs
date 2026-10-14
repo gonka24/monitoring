@@ -12,7 +12,7 @@ async fn public_routes() -> Result<(), Box<dyn std::error::Error>> {
         ("/missing", StatusCode::NOT_FOUND, ""),
     ] {
         let client = monitoring::chain::ChainClient::new("http://127.0.0.1:1")?;
-        let response = monitoring::create_app(client)
+        let response = monitoring::create_app(client, monitoring::cache::Cache::default())
             .oneshot(Request::builder().uri(path).body(Body::empty())?)
             .await?;
         assert_eq!(response.status(), status);

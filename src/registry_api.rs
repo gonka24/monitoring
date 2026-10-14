@@ -1,4 +1,4 @@
-use crate::chain::ChainClient;
+use crate::cache::Cache;
 use axum::{
     Json,
     extract::{Query, State},
@@ -13,22 +13,22 @@ pub struct PageQuery {
 }
 
 pub async fn list(
-    State(client): State<ChainClient>,
+    State(cache): State<Cache>,
     Query(query): Query<PageQuery>,
 ) -> Result<Json<Value>, StatusCode> {
-    let page = client
-        .deals(query.after)
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
-    let next = if page.deals.len() == 50 {
-        page.deals.last().map(|deal| deal.id.to_string())
-    } else {
-        None
-    };
-    let deals: Vec<_> = page
+    let (snapshot, stale) = cache.read().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let mut page = snapshot
         .deals
-        .into_iter()
-        .map(|deal| json!({"id": deal.id.to_string(), "address": deal.address}))
+        .iter()
+        .filter(|(id, _)| query.after.is_none_or(|after| **id > after));
+    let deals: Vec<_> = page
+        .by_ref()
+        .take(50)
+        .map(|(id, deal)| json!({"id": id.to_string(), "address": deal["address"]}))
         .collect();
-    Ok(Json(json!({"deals": deals, "next_after": next})))
+    let next = page
+        .next()
+        .and_then(|_| deals.last().map(|deal| deal["id"].clone()));
+    Ok(Json(json!({"deals": deals, "next_after": next,
+        "updated_at": snapshot.updated_at, "stale": stale})))
 }
