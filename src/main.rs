@@ -26,8 +26,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     let client = monitoring::chain::ChainClient::new(&endpoint)?;
     let cache = monitoring::cache::Cache::default();
-    let worker = tokio::spawn(monitoring::refresh::run(client.clone(), cache.clone()));
-    let result = axum::serve(listener, monitoring::create_app(client, cache))
+    let worker = tokio::spawn(monitoring::refresh::run(client, cache.clone()));
+    let result = axum::serve(listener, monitoring::create_app(cache))
         .with_graceful_shutdown(shutdown())
         .await;
     worker.abort();

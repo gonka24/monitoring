@@ -1,23 +1,23 @@
-use crate::{
-    chain::{ChainClient, ChainError},
-    deal::DealState,
-};
+use crate::cache::Cache;
 use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
 };
+use serde_json::{Value, json};
 
 pub async fn deal(
-    State(client): State<ChainClient>,
+    State(cache): State<Cache>,
     Path(address): Path<String>,
-) -> Result<Json<DealState>, (StatusCode, &'static str)> {
-    client
-        .state(&address)
-        .await
-        .map(Json)
-        .map_err(|error| match error {
-            ChainError::InvalidAddress => (StatusCode::BAD_REQUEST, "Invalid contract address"),
-            ChainError::Upstream => (StatusCode::BAD_GATEWAY, "Unable to read contract state"),
-        })
+) -> Result<Json<Value>, StatusCode> {
+    let (snapshot, stale) = cache.read().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let mut deal = snapshot
+        .deals
+        .values()
+        .find(|deal| deal["address"] == address)
+        .cloned()
+        .ok_or(StatusCode::NOT_FOUND)?;
+    deal["updated_at"] = json!(snapshot.updated_at);
+    deal["stale"] = json!(stale);
+    Ok(Json(deal))
 }
