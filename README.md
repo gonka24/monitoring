@@ -2,13 +2,16 @@
 
 Справочник возможностей, полей и примеров запросов: [HTTP API](docs/api.md).
 
+`POST /v2/deals/search` — прямой поиск в сети по hosts/buyers с деталями найденных сделок.
+[Контракт сетевого поиска и ограничения](docs/search.md).
+
 `GET /v1/deals/{address}` возвращает состояние, участников и условия сделки из кэша Factory.
 Запуск: `cargo run`; проверка: `curl http://localhost:8080/v1/deals/gonka1kxlsujae2mgahx2grd8hq8clhsk2zwsqk8q8esx6n2cpj426sdts9cdejs`.
 `GONKA_REST_URL` задаёт REST base URL (по умолчанию `https://node1.gonka.ai:8443/chain-api`).
 `GONKA_RPC_URL` задаёт RPC base URL (по умолчанию `https://node1.gonka.ai:8443/chain-rpc`).
 При смене сети задавайте оба URL для одной сети.
 HTTP 503 — снимок ещё не готов; 404 — адрес отсутствует в снимке Factory (включая неверный формат).
-Все маршруты сделок читают память без RPC; `updated_at` и `stale` показывают актуальность данных.
+Маршруты `/v1/deals` читают память без RPC; `updated_at` и `stale` показывают актуальность данных.
 
 Фоновый сборщик заполняет кэш в памяти при старте и обновляет раз в 60 секунд.
 Обход ограничен 50 секундами; ошибка сохраняет предыдущий снимок с `stale=true`.

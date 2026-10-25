@@ -1,0 +1,332 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Monitoring deals search",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/v2/deals/search": {
+      "post": {
+        "operationId": "searchDeals",
+        "summary": "Search Forward deals directly through node events",
+        "description": "Requires a nonempty hosts or buyers array. OR within arrays, AND between arrays. Searches node events, verifies Factory membership, reads current details. Order: normalized wallet then descending transaction order. Cursor fixes an event upper height, NOT state. Partial or empty pages may have next_cursor; always follow it. History completeness is unknown. No local database or registry scan. JSON body maximum 32768 bytes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              },
+              "example": {
+                "hosts": [
+                  "gonka1hvk3t5c4hzn0q8q3lvg6l7k4dfvfa5xqj4a66m"
+                ],
+                "limit": 50,
+                "cursor": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Page of verified current deals; partial_page and next_cursor indicate bounded-work continuation. No snapshot guarantee.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_FILTER, INVALID_LIMIT, INVALID_CURSOR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "REQUEST_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds before retrying",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Node unavailable, syncing/unindexed, timeout or inconsistent history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SearchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hosts": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+            },
+            "description": "Maximum before deduplication; null is invalid."
+          },
+          "buyers": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+            },
+            "description": "Nonempty buyers excludes null buyers."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "hosts"
+            ],
+            "properties": {
+              "hosts": {
+                "minItems": 1
+              }
+            }
+          },
+          {
+            "required": [
+              "buyers"
+            ],
+            "properties": {
+              "buyers": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      },
+      "Deal": {
+        "type": "object",
+        "required": [
+          "id",
+          "target_epoch",
+          "buyer_budget_micro_usdt",
+          "price_micro_usdt_per_gnk",
+          "address",
+          "host",
+          "factory",
+          "settlement_cw20",
+          "buyer",
+          "status",
+          "updated_at",
+          "stale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "target_epoch": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "buyer_budget_micro_usdt": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "price_micro_usdt_per_gnk": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "address": {
+            "type": "string",
+            "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+          },
+          "host": {
+            "type": "string",
+            "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+          },
+          "factory": {
+            "type": "string",
+            "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+          },
+          "settlement_cw20": {
+            "type": "string",
+            "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+          },
+          "buyer": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Canonical lowercase Gonka Bech32 address, checksum required; 20-byte account or 32-byte contract address."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "funded",
+              "locked",
+              "releasing",
+              "completed",
+              "refunded",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "updated_at": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix seconds at the start of this live request"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "False on successful current reads; does not guarantee node head freshness."
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "required": [
+          "deals",
+          "next_cursor",
+          "updated_at",
+          "stale",
+          "search_height",
+          "source",
+          "consistency",
+          "history_completeness",
+          "partial_page"
+        ],
+        "properties": {
+          "deals": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Deal"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix seconds at the start of this live request"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "False on successful current reads; does not guarantee node head freshness."
+          },
+          "search_height": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Upper height for events only; details are live state"
+          },
+          "source": {
+            "const": "chain"
+          },
+          "consistency": {
+            "const": "live_state"
+          },
+          "history_completeness": {
+            "const": "unknown"
+          },
+          "partial_page": {
+            "type": "boolean",
+            "description": "True when fewer than limit records and a cursor remains; continue even if deals is empty."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INVALID_FILTER",
+                  "INVALID_LIMIT",
+                  "INVALID_CURSOR",
+                  "REQUEST_TOO_LARGE",
+                  "RATE_LIMITED",
+                  "MONITORING_UNAVAILABLE"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

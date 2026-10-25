@@ -1,0 +1,87 @@
+{
+  "checked_at": "2026-10-26 Asia/Almaty",
+  "rpc": "https://node1.gonka.ai:8443/chain-rpc",
+  "rest": "https://node1.gonka.ai:8443/chain-api",
+  "results": [
+    {
+      "query": {
+        "hosts": [
+          "gonka1hvk3t5c4hzn0q8q3lvg6l7k4dfvfa5xqj4a66m"
+        ]
+      },
+      "http": 200,
+      "ids": [
+        "1"
+      ],
+      "source": "chain",
+      "search_height": "6735406",
+      "next_cursor": null,
+      "history_completeness": "unknown",
+      "elapsed_ms": 655
+    },
+    {
+      "query": {
+        "buyers": [
+          "gonka1ww2p5wv8plwte5tr00spkv0vt2hzr9s9kppd0x"
+        ]
+      },
+      "http": 200,
+      "ids": [
+        "1"
+      ],
+      "source": "chain",
+      "search_height": "6735406",
+      "next_cursor": null,
+      "history_completeness": "unknown",
+      "elapsed_ms": 641
+    },
+    {
+      "query": {
+        "hosts": [
+          "gonka1hvk3t5c4hzn0q8q3lvg6l7k4dfvfa5xqj4a66m"
+        ],
+        "buyers": [
+          "gonka1ww2p5wv8plwte5tr00spkv0vt2hzr9s9kppd0x"
+        ]
+      },
+      "http": 200,
+      "ids": [
+        "1"
+      ],
+      "source": "chain",
+      "search_height": "6735406",
+      "next_cursor": null,
+      "history_completeness": "unknown",
+      "elapsed_ms": 731
+    },
+    {
+      "query": {
+        "hosts": [
+          "gonka1ww2p5wv8plwte5tr00spkv0vt2hzr9s9kppd0x"
+        ],
+        "buyers": [
+          "gonka1hvk3t5c4hzn0q8q3lvg6l7k4dfvfa5xqj4a66m"
+        ]
+      },
+      "http": 200,
+      "ids": [],
+      "source": "chain",
+      "search_height": "6735406",
+      "next_cursor": null,
+      "history_completeness": "unknown",
+      "elapsed_ms": 224
+    },
+    {
+      "query": {},
+      "http": 400,
+      "error": {
+        "error": {
+          "code": "INVALID_FILTER",
+          "field": "filters",
+          "message": "Use at least one nonempty hosts/buyers filter with up to 100 valid Gonka addresses; unknown fields are rejected"
+        }
+      },
+      "elapsed_ms": 1
+    }
+  ]
+}

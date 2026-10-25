@@ -20,6 +20,7 @@ struct Stored {
 #[derive(Clone, Default)]
 pub struct Cache {
     inner: Arc<RwLock<Stored>>,
+    search: Option<crate::search::NetworkSearch>,
 }
 
 #[must_use]
@@ -31,6 +32,19 @@ pub fn now() -> u64 {
 }
 
 impl Cache {
+    #[must_use]
+    pub fn with_search(search: crate::search::NetworkSearch) -> Self {
+        Self {
+            search: Some(search),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn network_search(&self) -> Option<crate::search::NetworkSearch> {
+        self.search.clone()
+    }
+
     /// Returns the last complete snapshot and whether it needs refreshing.
     #[must_use]
     pub fn read(&self) -> Option<(Arc<Snapshot>, bool)> {

@@ -31,7 +31,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
         Err(error) => return Err(error.into()),
     };
     let rpc = monitoring::rpc::RpcClient::new(&rpc_endpoint)?;
-    let cache = monitoring::cache::Cache::default();
+    let search = monitoring::search::NetworkSearch::new(client.clone(), rpc.clone());
+    let cache = monitoring::cache::Cache::with_search(search);
     let worker = tokio::spawn(monitoring::refresh::run(client, rpc, cache.clone()));
     let result = axum::serve(listener, monitoring::create_app(cache))
         .with_graceful_shutdown(shutdown())
