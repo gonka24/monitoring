@@ -28,6 +28,7 @@ struct Step {
 }
 #[derive(Default)]
 struct Mock {
+    node: Option<String>,
     steps: Mutex<VecDeque<Step>>,
     calls: AtomicUsize,
     active: AtomicUsize,
@@ -51,7 +52,11 @@ impl RoutingTransport for Mock {
                 .unwrap_or_else(|e| panic!("{e}"))
                 .pop_front()
                 .unwrap_or_else(|| panic!("Unexpected request: {url}"));
-            assert_eq!(url, format!("{NODE}{}", step.path));
+            let expected = format!("{}{}", self.node.as_deref().unwrap_or(NODE), step.path);
+            assert_eq!(
+                reqwest::Url::parse(url).unwrap_or_else(|e| panic!("Invalid URL {url}: {e}")),
+                reqwest::Url::parse(&expected).unwrap_or_else(|e| panic!("{e}")),
+            );
             self.active.fetch_add(1, Ordering::SeqCst);
             let _active = Active(&self.active);
             tokio::time::sleep(step.delay).await;
@@ -132,6 +137,39 @@ async fn observe(steps: Vec<Step>) -> Result<DealRoutingResult, Error> {
 }
 fn body(steps: &mut [Step], i: usize) -> &mut Value {
     steps[i].reply.as_mut().unwrap_or_else(|e| panic!("{e}"))
+}
+
+#[tokio::test]
+async fn normalized_node_urls_preserve_origin_and_query_paths() -> TestResult {
+    for node in [
+        "https://node1.gonka.ai:443",
+        "http://localhost:80",
+        "https://é.com",
+        "http://[0:0:0:0:0:0:0:1]:8080",
+    ] {
+        let mut deployment = RoutingDeployment::mainnet()?;
+        deployment.nodes = vec![node.into()];
+        let transport = Arc::new(Mock {
+            node: Some(node.into()),
+            steps: Mutex::new(attempt(437, 442, json!([{"epoch":442,"recipient":DEAL}])).into()),
+            ..Mock::default()
+        });
+        let client = RoutingClient::new(deployment, node, transport.clone())?;
+        let result = client
+            .get_deal_routing(DEAL, RoutingOptions::default())
+            .await?;
+        assert_eq!(result.state, State::Configured);
+        assert_eq!(result.evidence.node, node);
+        assert_eq!(transport.calls.load(Ordering::SeqCst), 8);
+        assert!(
+            transport
+                .steps
+                .lock()
+                .unwrap_or_else(|e| panic!("{e}"))
+                .is_empty()
+        );
+    }
+    Ok(())
 }
 
 #[tokio::test]

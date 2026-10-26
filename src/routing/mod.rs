@@ -160,7 +160,11 @@ impl RoutingClient {
     }
 
     async fn get(&self, path: &str) -> Result<Value, RoutingError> {
-        let body = self.transport.get(&format!("{}{path}", self.node)).await?;
+        self.get_url(&format!("{}{path}", self.node)).await
+    }
+
+    async fn get_url(&self, url: &str) -> Result<Value, RoutingError> {
+        let body = self.transport.get(url).await?;
         if body.get("error").is_some_and(|e| !e.is_null())
             || body.get("code").is_some_and(|v| v != 0 && v != "0")
         {
@@ -182,7 +186,7 @@ impl RoutingClient {
             .map_err(|()| RoutingError::InvalidDeployment)?
             .pop_if_empty()
             .push(&encoded);
-        let body = self.get(&url.as_str()[self.node.len()..]).await?;
+        let body = self.get_url(url.as_str()).await?;
         body.get("data").cloned().ok_or(RoutingError::Incomplete)
     }
 
