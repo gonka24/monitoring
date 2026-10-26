@@ -94,3 +94,11 @@ CI повторяет проверки независимо от локальн�
 
 Дальнейшая структура и план: [docs/plan.md](docs/plan.md).
 Подготовка Cloud Run: [docs/deploy.md](docs/deploy.md).
+
+### Текущий routing сделки
+
+`GET /v1/deals/{deal}/routing` проверяет текущий маршрут напрямую в сети, включая
+полную идентичность сделки и регистрацию в Factory. Возвращает `CONFIGURED`,
+`OTHER_RECIPIENT`, `NOT_CONFIGURED` или `HISTORY_UNKNOWN`; ошибки не превращаются
+в отсутствие маршрута. Общий deadline — 12 секунд, лимит HTTP — 8 наблюдений.
+[Контракт Rust/HTTP, cancellation и интеграция Dashboard](docs/routing.md).

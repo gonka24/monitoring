@@ -32,7 +32,15 @@ async fn run() -> Result<(), Box<dyn Error>> {
     };
     let rpc = monitoring::rpc::RpcClient::new(&rpc_endpoint)?;
     let search = monitoring::search::NetworkSearch::new(client.clone(), rpc.clone());
-    let cache = monitoring::cache::Cache::with_search(search);
+    let deployment = monitoring::routing::RoutingDeployment::mainnet()?;
+    // Routing uses a single pinned base for REST and RPC. Never combine the
+    // independently configurable legacy collector endpoints for an observation.
+    let routing = monitoring::routing::RoutingClient::new(
+        deployment.clone(),
+        &deployment.nodes[0],
+        std::sync::Arc::new(monitoring::routing::HttpRoutingTransport::new()?),
+    )?;
+    let cache = monitoring::cache::Cache::with_search(search).with_routing(routing);
     let worker = tokio::spawn(monitoring::refresh::run(client, rpc, cache.clone()));
     let result = axum::serve(listener, monitoring::create_app(cache))
         .with_graceful_shutdown(shutdown())
