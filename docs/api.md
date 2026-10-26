@@ -102,3 +102,9 @@ API передаёт статус контракта, не вычисляет е
 Лимиты сбора: 1000 сделок; на сделку — 1000 транзакций и 10 000 подходящих событий; запрос к ноде — до 10 секунд. История сделки ограничена 50 секундами и общим 50-секундным бюджетом обновления. Превышение отменяет весь новый снимок.
 Повтор хеша, изменение `total_count`, неполная страница истории или ошибка RPC также отменяют сбор.
 Нет БД, подписок/WebSocket, алертов, OpenAPI/Swagger и встроенного rate limiting. Деплой: [deploy.md](deploy.md).
+
+## Live routing (v0.2.0)
+
+`GET /v1/deals/{deal}/routing` returns a fresh, fully verified routing observation
+with four explicit states and `Cache-Control: no-store`. It is independent of
+cached deal state. See [routing contract, errors and integration](routing.md).

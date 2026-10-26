@@ -21,6 +21,7 @@ struct Stored {
 pub struct Cache {
     inner: Arc<RwLock<Stored>>,
     search: Option<crate::search::NetworkSearch>,
+    routing: Option<crate::routing::RoutingClient>,
 }
 
 #[must_use]
@@ -32,6 +33,17 @@ pub fn now() -> u64 {
 }
 
 impl Cache {
+    #[must_use]
+    pub fn with_routing(mut self, routing: crate::routing::RoutingClient) -> Self {
+        self.routing = Some(routing);
+        self
+    }
+
+    #[must_use]
+    pub fn routing(&self) -> Option<crate::routing::RoutingClient> {
+        self.routing.clone()
+    }
+
     #[must_use]
     pub fn with_search(search: crate::search::NetworkSearch) -> Self {
         Self {
