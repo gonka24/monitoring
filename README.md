@@ -102,3 +102,29 @@ CI повторяет проверки независимо от локальн�
 `OTHER_RECIPIENT`, `NOT_CONFIGURED` или `HISTORY_UNKNOWN`; ошибки не превращаются
 в отсутствие маршрута. Общий deadline — 12 секунд, лимит HTTP — 8 наблюдений.
 [Контракт Rust/HTTP, cancellation и интеграция Dashboard](docs/routing.md).
+
+### Diagnosing stale snapshots and 503 responses
+
+The HTTP service can remain healthy while snapshot collection fails. A failed
+collection retains the last complete snapshot and marks it stale; `/healthz`
+does not assert that chain reads or network search are healthy.
+
+Failures emit JSON records on stderr with `severity=ERROR`,
+`component=monitoring`, `operation`, `reason`, and nullable `upstream_status`.
+For Cloud Logging, filter on the service plus `jsonPayload.component="monitoring"`.
+
+- `snapshot.refresh`: `collection_failed` or `deadline_exceeded` (50 seconds).
+  Look for the preceding `snapshot.registry`, `.config`, `.state`, `.history`,
+  or `.validate` record to narrow the failed collection stage.
+- `chain.*` and `rpc.*`: `timeout`, `connect`, `http_status`, `decode`,
+  `transport`, or `invalid_response`. HTTP failures include the upstream status.
+- `routing.tip`, `.epoch`, `.identity`, `.recipient`, and `.response`: the
+  existing routing error code. `routing.http` adds transport/HTTP/JSON detail.
+- `search.collect`: `deadline_exceeded` (30 seconds); `search.response` records
+  `MONITORING_UNAVAILABLE`. Check accompanying `chain.*`/`rpc.*` failures.
+
+URLs, query parameters, wallet/contract addresses, response bodies and raw
+exception messages are not logged. The records identify failure categories,
+not the complete underlying exception. Concurrent requests can interleave;
+records do not currently carry a per-request correlation ID. Public response
+contracts, refresh intervals, deadlines and stale-data behavior are unchanged.

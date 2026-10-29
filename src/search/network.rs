@@ -39,7 +39,10 @@ impl NetworkSearch {
             .map_err(|_| SearchError::RateLimited)?;
         tokio::time::timeout(Duration::from_secs(30), self.collect(request, cursor))
             .await
-            .map_err(|_| SearchError::Unavailable)?
+            .map_err(|_| {
+                crate::diagnostics::failure("search.collect", "deadline_exceeded");
+                SearchError::Unavailable
+            })?
     }
 
     async fn collect(

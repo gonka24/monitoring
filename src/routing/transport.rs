@@ -30,16 +30,18 @@ impl RoutingTransport for HttpRoutingTransport {
         url: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<Value, RoutingError>> + Send + 'a>> {
         Box::pin(async move {
-            let response = self
-                .0
-                .get(url)
-                .send()
-                .await
-                .map_err(|_| RoutingError::RpcUnavailable)?;
+            let response = self.0.get(url).send().await.map_err(|error| {
+                crate::diagnostics::request_error("routing.http", &error);
+                RoutingError::RpcUnavailable
+            })?;
             if !response.status().is_success() {
+                crate::diagnostics::http_status("routing.http", response.status().as_u16());
                 return Err(RoutingError::RpcError);
             }
-            response.json().await.map_err(|_| RoutingError::Incomplete)
+            response.json().await.map_err(|error| {
+                crate::diagnostics::request_error("routing.http", &error);
+                RoutingError::Incomplete
+            })
         })
     }
 }

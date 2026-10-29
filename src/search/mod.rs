@@ -72,6 +72,9 @@ impl IntoResponse for SearchError {
                 None,
             ),
         };
+        if status == StatusCode::SERVICE_UNAVAILABLE {
+            crate::diagnostics::failure("search.response", code);
+        }
         let mut error = json!({"code":code,"message":message});
         if let Some(field) = field {
             error["field"] = json!(field);

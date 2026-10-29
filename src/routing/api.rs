@@ -14,6 +14,10 @@ impl IntoResponse for RoutingError {
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
             _ => StatusCode::SERVICE_UNAVAILABLE,
         };
+        if status == StatusCode::SERVICE_UNAVAILABLE {
+            // The enum contains fixed codes, never upstream error text.
+            crate::diagnostics::failure("routing.response", &self.to_string());
+        }
         let mut response = (
             status,
             Json(serde_json::json!({"error":{"code":self,"message":"Could not verify routing"}})),

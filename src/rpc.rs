@@ -45,21 +45,31 @@ impl RpcClient {
             .send()
             .await
             .and_then(reqwest::Response::error_for_status)
-            .map_err(|_| ChainError::Upstream)?
+            .map_err(|error| {
+                crate::diagnostics::request_error("rpc.status", &error);
+                ChainError::Upstream
+            })?
             .json()
             .await
-            .map_err(|_| ChainError::Upstream)?;
+            .map_err(|error| {
+                crate::diagnostics::request_error("rpc.status", &error);
+                ChainError::Upstream
+            })?;
         if body.get("error").is_some_and(|v| !v.is_null())
             || body["result"]["sync_info"]["catching_up"] != false
             || body["result"]["node_info"]["other"]["tx_index"] != "on"
         {
+            crate::diagnostics::failure("rpc.status", "invalid_response");
             return Err(ChainError::Upstream);
         }
         body["result"]["sync_info"]["latest_block_height"]
             .as_str()
             .and_then(|s| s.parse::<u64>().ok())
             .filter(|h| *h > 0)
-            .ok_or(ChainError::Upstream)
+            .ok_or_else(|| {
+                crate::diagnostics::failure("rpc.status", "invalid_response");
+                ChainError::Upstream
+            })
     }
 
     pub(crate) async fn search_events(
@@ -72,11 +82,15 @@ impl RpcClient {
         let response = self.http.get(format!("{}/tx_search", self.endpoint))
             .query(&serde_json::json!({"query":serde_json::to_string(&query).map_err(|_| ChainError::Upstream)?,
                 "page":page.to_string(),"per_page":"20","order_by":"\"desc\"","prove":"false"}))
-            .send().await.and_then(reqwest::Response::error_for_status).map_err(|_| ChainError::Upstream)?;
-        let body: Response = response.json().await.map_err(|_| ChainError::Upstream)?;
-        body.result
-            .filter(|_| body.error.is_none())
-            .ok_or(ChainError::Upstream)
+            .send().await.and_then(reqwest::Response::error_for_status).map_err(|error| { crate::diagnostics::request_error("rpc.search_events", &error); ChainError::Upstream })?;
+        let body: Response = response.json().await.map_err(|error| {
+            crate::diagnostics::request_error("rpc.search_events", &error);
+            ChainError::Upstream
+        })?;
+        body.result.filter(|_| body.error.is_none()).ok_or_else(|| {
+            crate::diagnostics::failure("rpc.search_events", "invalid_response");
+            ChainError::Upstream
+        })
     }
 
     /// Reads up to 20 indexed transactions in ascending order, with pages starting at 1.
@@ -101,11 +115,18 @@ impl RpcClient {
             .send()
             .await
             .and_then(reqwest::Response::error_for_status)
-            .map_err(|_| ChainError::Upstream)?;
-        let body: Response = response.json().await.map_err(|_| ChainError::Upstream)?;
-        body.result
-            .filter(|_| body.error.is_none())
-            .ok_or(ChainError::Upstream)
+            .map_err(|error| {
+                crate::diagnostics::request_error("rpc.history", &error);
+                ChainError::Upstream
+            })?;
+        let body: Response = response.json().await.map_err(|error| {
+            crate::diagnostics::request_error("rpc.history", &error);
+            ChainError::Upstream
+        })?;
+        body.result.filter(|_| body.error.is_none()).ok_or_else(|| {
+            crate::diagnostics::failure("rpc.history", "invalid_response");
+            ChainError::Upstream
+        })
     }
 }
 

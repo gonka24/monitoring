@@ -298,15 +298,27 @@ impl RoutingClient {
     async fn observe(&self, deal: &str) -> Result<DealRoutingResult, RoutingError> {
         let mut previous_end = 0;
         for _ in 0..2 {
-            let start = self.tip().await?;
+            let start = self.tip().await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.tip", &error.to_string());
+            })?;
             if start < previous_end {
                 return Err(RoutingError::ObservationChanged);
             }
-            let current = self.epoch().await?;
-            let identity = self.deal_identity(deal).await?;
-            let recipient = self.recipient(&identity).await?;
-            let end_epoch = self.epoch().await?;
-            let end = self.tip().await?;
+            let current = self.epoch().await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.epoch", &error.to_string());
+            })?;
+            let identity = self.deal_identity(deal).await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.identity", &error.to_string());
+            })?;
+            let recipient = self.recipient(&identity).await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.recipient", &error.to_string());
+            })?;
+            let end_epoch = self.epoch().await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.epoch", &error.to_string());
+            })?;
+            let end = self.tip().await.inspect_err(|error| {
+                crate::diagnostics::failure("routing.tip", &error.to_string());
+            })?;
             if end < start {
                 return Err(RoutingError::ObservationChanged);
             }
