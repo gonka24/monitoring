@@ -15,11 +15,16 @@ where
     timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
     loop {
         timer.tick().await;
-        if let Ok(Ok(snapshot)) = timeout(Duration::from_secs(50), collect()).await {
-            cache.publish(snapshot);
-        } else {
-            cache.mark_failed();
-            eprintln!("Snapshot refresh failed or timed out; retaining previous data");
+        match timeout(Duration::from_secs(50), collect()).await {
+            Ok(Ok(snapshot)) => cache.publish(snapshot),
+            Ok(Err(_)) => {
+                cache.mark_failed();
+                crate::diagnostics::failure("snapshot.refresh", "collection_failed");
+            }
+            Err(_) => {
+                cache.mark_failed();
+                crate::diagnostics::failure("snapshot.refresh", "deadline_exceeded");
+            }
         }
     }
 }

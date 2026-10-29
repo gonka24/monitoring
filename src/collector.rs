@@ -18,7 +18,9 @@ pub async fn collect(client: &ChainClient, rpc: &RpcClient) -> Result<Snapshot, 
     let mut addresses = BTreeSet::new();
     let mut after = None;
     loop {
-        let page = client.deals(after).await?;
+        let page = client.deals(after).await.inspect_err(|_| {
+            crate::diagnostics::failure("snapshot.registry", "failed");
+        })?;
         if page.deals.is_empty() {
             return Ok(Snapshot {
                 deals,
@@ -31,14 +33,24 @@ pub async fn collect(client: &ChainClient, rpc: &RpcClient) -> Result<Snapshot, 
                 || Some(deal.id) <= after
                 || !addresses.insert(deal.address.clone())
             {
+                crate::diagnostics::failure("snapshot.validate", "invalid_response");
                 return Err(ChainError::Upstream);
             }
-            let config = client.config(&deal.address).await?;
+            let config = client.config(&deal.address).await.inspect_err(|_| {
+                crate::diagnostics::failure("snapshot.config", "failed");
+            })?;
             if config.factory != factory::ADDRESS || config.deal_address != deal.address {
+                crate::diagnostics::failure("snapshot.validate", "invalid_response");
                 return Err(ChainError::Upstream);
             }
-            let state = client.state(&deal.address).await?;
-            let events = history::collect(rpc, &deal.address).await?;
+            let state = client.state(&deal.address).await.inspect_err(|_| {
+                crate::diagnostics::failure("snapshot.state", "failed");
+            })?;
+            let events = history::collect(rpc, &deal.address)
+                .await
+                .inspect_err(|_| {
+                    crate::diagnostics::failure("snapshot.history", "failed");
+                })?;
             histories.insert(deal.address.clone(), events);
             deals.insert(
                 deal.id,

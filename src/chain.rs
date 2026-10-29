@@ -73,6 +73,16 @@ impl ChainClient {
         {
             return Err(ChainError::InvalidAddress);
         }
+        let operation = match query
+            .as_object()
+            .and_then(|o| o.keys().next())
+            .map(String::as_str)
+        {
+            Some("state") => "chain.state",
+            Some("config") => "chain.config",
+            Some("list_deals") => "chain.list_deals",
+            _ => "chain.smart_query",
+        };
         let query = STANDARD.encode(query.to_string());
         let url = format!(
             "{}/cosmwasm/wasm/v1/contract/{address}/smart/{query}",
@@ -84,8 +94,14 @@ impl ChainClient {
             .send()
             .await
             .and_then(reqwest::Response::error_for_status)
-            .map_err(|_| ChainError::Upstream)?;
-        let body: SmartResponse<T> = response.json().await.map_err(|_| ChainError::Upstream)?;
+            .map_err(|error| {
+                crate::diagnostics::request_error(operation, &error);
+                ChainError::Upstream
+            })?;
+        let body: SmartResponse<T> = response.json().await.map_err(|error| {
+            crate::diagnostics::request_error(operation, &error);
+            ChainError::Upstream
+        })?;
         Ok(body.data)
     }
 }

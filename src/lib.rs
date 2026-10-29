@@ -9,6 +9,7 @@ pub mod chain;
 pub mod collector;
 pub mod config;
 pub mod deal;
+mod diagnostics;
 pub mod event;
 pub mod factory;
 pub mod history;
