@@ -13,6 +13,7 @@ mod diagnostics;
 pub mod event;
 pub mod factory;
 pub mod history;
+pub mod pool;
 pub mod refresh;
 mod registry_api;
 pub mod routing;

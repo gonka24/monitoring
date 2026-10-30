@@ -34,6 +34,8 @@ pub struct Node {
 }
 pub struct Mock {
     pub app: Router,
+    #[allow(dead_code)] // Used by the pool integration suite, shared with single-node tests.
+    pub base: String,
     pub node: Node,
     server: tokio::task::JoinHandle<Result<(), std::io::Error>>,
 }
@@ -59,10 +61,15 @@ impl Mock {
                 get(smart),
             )
             .with_state(node.clone());
+        let routes = routes
+            .clone()
+            .nest("/chain-api", routes.clone())
+            .nest("/chain-rpc", routes);
         let server = tokio::spawn(async move { axum::serve(listener, routes).await });
         let search = NetworkSearch::new(ChainClient::new(&url)?, RpcClient::new(&url)?);
         Ok(Self {
             app: monitoring::create_app(Cache::with_search(search)),
+            base: url,
             node,
             server,
         })
@@ -81,8 +88,22 @@ async fn status(State(node): State<Node>) -> Json<Value> {
     } else {
         "on"
     };
+    let mode = node.mode.load(Ordering::Relaxed);
+    let block_time = if mode == 8 {
+        "2020-01-01T00:00:00Z".to_owned()
+    } else {
+        time::OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default()
+    };
+    let network = if mode == 7 {
+        "wrong-chain"
+    } else {
+        "gonka-mainnet"
+    };
     Json(
-        json!({"result":{"sync_info":{"latest_block_height":"1000","catching_up":false},"node_info":{"other":{"tx_index":indexing}}}}),
+        json!({"result":{"sync_info":{"latest_block_height":"1000","catching_up":mode == 9,
+        "latest_block_time":block_time},"node_info":{"network":network,"other":{"tx_index":indexing}}}}),
     )
 }
 fn attr(key: &str, value: &str) -> Value {
@@ -153,7 +174,15 @@ async fn events(State(node): State<Node>, Query(params): Query<Value>) -> Json<V
     };
     Json(json!({"result":{"total_count":total.to_string(),"txs":txs}}))
 }
-async fn smart(
+async fn smart(state: State<Node>, path: Path<(String, String)>) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if state.0.mode.load(Ordering::Relaxed) == 11 {
+        log(&state.0, "smart:503".into());
+        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+    smart_json(state, path).into_response()
+}
+fn smart_json(
     State(node): State<Node>,
     Path((address, encoded)): Path<(String, String)>,
 ) -> Json<Value> {

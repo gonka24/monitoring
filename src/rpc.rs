@@ -72,6 +72,49 @@ impl RpcClient {
             })
     }
 
+    /// Verifies the capabilities needed by pooled search and history collection.
+    pub(crate) async fn check_pool_node(&self) -> Result<(), ChainError> {
+        let body: serde_json::Value = self
+            .http
+            .get(format!("{}/status", self.endpoint))
+            .send()
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .map_err(|error| {
+                crate::diagnostics::request_error("pool.status", &error);
+                ChainError::Upstream
+            })?
+            .json()
+            .await
+            .map_err(|_| ChainError::Upstream)?;
+        let result = &body["result"];
+        let fresh = result["sync_info"]["latest_block_time"]
+            .as_str()
+            .and_then(|s| {
+                time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339).ok()
+            })
+            .is_some_and(|t| {
+                (time::OffsetDateTime::now_utc() - t)
+                    .whole_seconds()
+                    .unsigned_abs()
+                    < 180
+            });
+        if body.get("error").is_some_and(|v| !v.is_null())
+            || result["node_info"]["network"] != "gonka-mainnet"
+            || result["node_info"]["other"]["tx_index"] != "on"
+            || result["sync_info"]["catching_up"] != false
+            || result["sync_info"]["latest_block_height"]
+                .as_str()
+                .and_then(|h| h.parse::<u64>().ok())
+                .is_none_or(|h| h == 0)
+            || !fresh
+        {
+            crate::diagnostics::failure("pool.status", "ineligible_node");
+            return Err(ChainError::Upstream);
+        }
+        Ok(())
+    }
+
     pub(crate) async fn search_events(
         &self,
         query: &str,

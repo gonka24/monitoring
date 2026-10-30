@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub(super) struct Cursor {
     pub version: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node: Option<String>,
     pub filters: Filters,
     pub limit: usize,
     pub height: u64,
@@ -26,6 +28,7 @@ impl Cursor {
         } else {
             Self {
                 version: 1,
+                node: None,
                 filters: request.filters.clone(),
                 limit: request.limit,
                 height,
