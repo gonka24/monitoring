@@ -7,9 +7,10 @@
 
 `GET /v1/deals/{address}` возвращает состояние, участников и условия сделки из кэша Factory.
 Запуск: `cargo run`; проверка: `curl http://localhost:8080/v1/deals/gonka1kxlsujae2mgahx2grd8hq8clhsk2zwsqk8q8esx6n2cpj426sdts9cdejs`.
-`GONKA_REST_URL` задаёт REST base URL (по умолчанию `https://node1.gonka.ai:8443/chain-api`).
-`GONKA_RPC_URL` задаёт RPC base URL (по умолчанию `https://node1.gonka.ai:8443/chain-rpc`).
-При смене сети задавайте оба URL для одной сети.
+Поиск и сборщик используют [пул узлов](docs/node-pool.md):
+`GONKA_NODE_URLS=https://node1.gonka.ai:8443,https://node3.gonka.ai`.
+Это также default при отсутствии настроек. `GONKA_REST_URL` и `GONKA_RPC_URL`
+сохраняют legacy-режим одного узла, если `GONKA_NODE_URLS` не задан.
 HTTP 503 — снимок ещё не готов; 404 — адрес отсутствует в снимке Factory (включая неверный формат).
 Маршруты `/v1/deals` читают память без RPC; `updated_at` и `stale` показывают актуальность данных.
 
@@ -53,7 +54,8 @@ curl http://localhost:8080/healthz
 При запуске приложение загружает `.env` из текущего рабочего каталога
 до запуска Tokio. Запускайте `cargo run` из корня репозитория.
 Для локальных настроек скопируйте `.env.example` в `.env`, если его ещё нет,
-и заполните значения у себя. Приложение использует `PORT`, `GONKA_REST_URL` и `GONKA_RPC_URL`.
+и заполните значения у себя. Приложение использует `PORT`, `GONKA_NODE_URLS`, а также legacy-настройки
+`GONKA_REST_URL` и `GONKA_RPC_URL`.
 
 Переменные, заданные в окружении, имеют приоритет над `.env`:
 `PORT=3000 cargo run` переопределит порт из файла.

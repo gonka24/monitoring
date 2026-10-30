@@ -13,6 +13,7 @@ pub struct NetworkSearch {
     pub(super) chain: ChainClient,
     pub(super) rpc: RpcClient,
     capacity: Arc<Semaphore>,
+    pool: Option<crate::pool::NodePool>,
 }
 impl NetworkSearch {
     #[must_use]
@@ -21,7 +22,18 @@ impl NetworkSearch {
             chain,
             rpc,
             capacity: Arc::new(Semaphore::new(8)),
+            pool: None,
         }
+    }
+
+    /// Uses a shared pool for new searches; continuation cursors stay on their source.
+    /// # Errors
+    /// Returns an error if the pool cannot supply an initial client pair.
+    pub fn with_pool(pool: crate::pool::NodePool) -> Result<Self, SearchError> {
+        let lease = pool.acquire(None, &[]).ok_or(SearchError::Unavailable)?;
+        let mut search = Self::new(lease.chain(), lease.rpc());
+        search.pool = Some(pool);
+        Ok(search)
     }
 
     /// Searches indexed network events, then reads only verified candidates' details.
@@ -37,12 +49,52 @@ impl NetworkSearch {
             .clone()
             .try_acquire_owned()
             .map_err(|_| SearchError::RateLimited)?;
-        tokio::time::timeout(Duration::from_secs(30), self.collect(request, cursor))
+        tokio::time::timeout(Duration::from_secs(30), self.dispatch(request, cursor))
             .await
             .map_err(|_| {
                 crate::diagnostics::failure("search.collect", "deadline_exceeded");
                 SearchError::Unavailable
             })?
+    }
+
+    async fn dispatch(
+        &self,
+        request: &SearchRequest,
+        cursor: Cursor,
+    ) -> Result<Value, SearchError> {
+        let Some(pool) = &self.pool else {
+            if cursor.node.is_some() {
+                return Err(SearchError::InvalidCursor);
+            }
+            return self.collect(request, cursor).await;
+        };
+        let pinned = cursor.node;
+        // Older cursors have no source identity: require a fresh search rather than
+        // silently changing the indexed history underneath a continuation.
+        if request.cursor.is_some() && pinned.as_ref().is_none_or(|id| !pool.contains(id)) {
+            return Err(SearchError::InvalidCursor);
+        }
+        let mut tried = Vec::new();
+        for _ in 0..3 {
+            let Some(lease) = pool.acquire(pinned.as_deref(), &tried) else {
+                break;
+            };
+            tried.push(lease.index);
+            let mut cursor = Cursor::read(request, u64::MAX)?;
+            cursor.node = Some(lease.id().to_owned());
+            let worker = Self::new(lease.chain(), lease.rpc());
+            let result = tokio::time::timeout(Duration::from_secs(12), async {
+                worker.rpc.check_pool_node().await?;
+                worker.collect(request, cursor).await
+            })
+            .await
+            .unwrap_or(Err(SearchError::Unavailable));
+            lease.finish(!matches!(result, Err(SearchError::Unavailable)));
+            if !matches!(result, Err(SearchError::Unavailable)) {
+                return result;
+            }
+        }
+        Err(SearchError::Unavailable)
     }
 
     async fn collect(

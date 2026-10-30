@@ -6,6 +6,10 @@ pub async fn run(client: ChainClient, rpc: RpcClient, cache: Cache) {
     refresh(cache, || collect(&client, &rpc)).await;
 }
 
+pub async fn run_pool(pool: crate::pool::NodePool, cache: Cache) {
+    refresh(cache, || pool.collect()).await;
+}
+
 async fn refresh<F, T>(cache: Cache, mut collect: F)
 where
     F: FnMut() -> T,

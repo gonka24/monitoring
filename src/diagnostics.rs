@@ -10,6 +10,12 @@ pub(crate) fn failure(operation: &str, reason: &str) {
     eprintln!("{}", record(operation, reason, None));
 }
 
+pub(crate) fn pool_failure(index: usize) {
+    let mut entry = record("pool.node", "cooldown", None);
+    entry["node_index"] = json!(index);
+    eprintln!("{entry}");
+}
+
 pub(crate) fn http_status(operation: &str, status: u16) {
     eprintln!("{}", record(operation, "http_status", Some(status)));
 }
