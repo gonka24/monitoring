@@ -50,7 +50,8 @@ async fn discards_partial_snapshot_before_retrying_another_node()
     let completed = Arc::new(AtomicUsize::new(0));
     let mut bases = Vec::new();
     let mut servers = Vec::new();
-    for broken in [true, false] {
+    for index in 0..10 {
+        let broken = index < 9;
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
         bases.push(format!("http://{}", listener.local_addr()?));
         let counter = completed.clone();
@@ -69,8 +70,8 @@ async fn discards_partial_snapshot_before_retrying_another_node()
     let snapshot = result.map_err(|e| format!("{e:?}"))?;
     assert_eq!(
         completed.load(Ordering::Relaxed),
-        1,
-        "first node completed one deal before failing"
+        9,
+        "nine nodes each completed one deal before failing"
     );
     assert!(
         snapshot.deals.is_empty(),

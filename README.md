@@ -9,8 +9,12 @@
 Запуск: `cargo run`; проверка: `curl http://localhost:8080/v1/deals/gonka1kxlsujae2mgahx2grd8hq8clhsk2zwsqk8q8esx6n2cpj426sdts9cdejs`.
 Поиск и сборщик используют [пул узлов](docs/node-pool.md):
 `GONKA_NODE_URLS=https://node1.gonka.ai:8443,https://node3.gonka.ai`.
-Это также default при отсутствии настроек. `GONKA_REST_URL` и `GONKA_RPC_URL`
-сохраняют legacy-режим одного узла, если `GONKA_NODE_URLS` не задан.
+Для общего inventory routing/поиска/сборщика задайте
+`GONKA_NODES_FILE=config/nodes.json` (10 endpoint, поддерживается до 64).
+Docker и CI используют этот файл; [правила переключения](docs/node-pool.md).
+Локальный запуск без настроек использует node1:8443 и node3:443.
+`GONKA_REST_URL` и `GONKA_RPC_URL` сохраняют legacy-режим одного узла,
+если не заданы ни `GONKA_NODES_FILE`, ни `GONKA_NODE_URLS`.
 HTTP 503 — снимок ещё не готов; 404 — адрес отсутствует в снимке Factory (включая неверный формат).
 Маршруты `/v1/deals` читают память без RPC; `updated_at` и `stale` показывают актуальность данных.
 
@@ -122,6 +126,11 @@ For Cloud Logging, filter on the service plus `jsonPayload.component="monitoring
   `transport`, or `invalid_response`. HTTP failures include the upstream status.
 - `routing.tip`, `.epoch`, `.identity`, `.recipient`, and `.response`: the
   existing routing error code. `routing.http` adds transport/HTTP/JSON detail.
+  Routing HTTP failures also include `upstream_host`, `upstream_port`, a fixed
+  `endpoint` label (`status`, `epoch`, `contract_info`, `contract_smart`,
+  `claim_recipients`, or `other`), and `elapsed_ms`. Dynamic path segments,
+  credentials and query parameters are omitted. These fields identify the
+  failing upstream and endpoint category, not the reason it returned an error.
 - `search.collect`: `deadline_exceeded` (30 seconds); `search.response` records
   `MONITORING_UNAVAILABLE`. Check accompanying `chain.*`/`rpc.*` failures.
 

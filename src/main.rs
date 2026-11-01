@@ -32,16 +32,22 @@ async fn run() -> Result<(), Box<dyn Error>> {
         Err(env::VarError::NotPresent) => None,
         Err(error) => return Err(error.into()),
     };
-    let pool = pool_urls
-        .map(|urls| {
-            monitoring::pool::NodePool::new(
-                &urls
-                    .split(',')
-                    .map(|s| s.trim().to_owned())
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .transpose()?;
+    let pool = if let Some(path) = env::var_os("GONKA_NODES_FILE") {
+        Some(monitoring::config::NodeConfig::load(std::path::Path::new(
+            &path,
+        ))?)
+    } else {
+        pool_urls
+            .map(|urls| {
+                monitoring::pool::NodePool::new(
+                    &urls
+                        .split(',')
+                        .map(|s| s.trim().to_owned())
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .transpose()?
+    };
     let endpoint = match env::var("GONKA_REST_URL") {
         Ok(value) => value,
         Err(env::VarError::NotPresent) => "https://node1.gonka.ai:8443/chain-api".into(),
@@ -61,13 +67,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
         monitoring::search::NetworkSearch::new(client.clone(), rpc.clone())
     };
     let deployment = monitoring::routing::RoutingDeployment::mainnet()?;
-    // Routing uses a single pinned base for REST and RPC. Never combine the
-    // independently configurable legacy collector endpoints for an observation.
-    let routing = monitoring::routing::RoutingClient::new(
-        deployment.clone(),
-        &deployment.nodes[0],
-        std::sync::Arc::new(monitoring::routing::HttpRoutingTransport::new()?),
-    )?;
+    let transport = std::sync::Arc::new(monitoring::routing::HttpRoutingTransport::new()?);
+    let routing = if let Some(pool) = &pool {
+        monitoring::routing::RoutingClient::with_pool(deployment, pool.clone(), transport)?
+    } else {
+        monitoring::routing::RoutingClient::new(
+            deployment.clone(),
+            &deployment.nodes[0],
+            transport,
+        )?
+    };
     let cache = monitoring::cache::Cache::with_search(search).with_routing(routing);
     let worker = if let Some(pool) = pool {
         tokio::spawn(monitoring::refresh::run_pool(pool, cache.clone()))

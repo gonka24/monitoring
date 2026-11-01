@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    "https://node1.gonka.ai:8443",
+    "https://node2.gonka.ai:8443",
+    "https://node3.gonka.ai",
+    "https://rpc.gonka.gg",
+    "http://47.236.19.22:18000",
+    "http://36.189.234.237:17241",
+    "http://gonka.spv.re:8000",
+    "https://gonka.gg",
+    "http://node1.gonka.ai:8000",
+    "http://node2.gonka.ai:8000"
+  ]
+}

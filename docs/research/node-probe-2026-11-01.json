@@ -1,0 +1,597 @@
+{
+  "checked_at": "2026-11-01T12:23:21.815746+00:00",
+  "source": "local_probe",
+  "results": [
+    {
+      "node": "https://node1.gonka.ai:8443",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 357,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 299
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 330
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 361
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 380
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 333
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 331
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 348
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 341
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 477
+        }
+      }
+    },
+    {
+      "node": "https://node2.gonka.ai:8443",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 354,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "off",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 338
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 357
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 357
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 349
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 367
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 334
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 360
+        },
+        "history": {
+          "status": 500,
+          "reason": "http_status",
+          "elapsed_ms": 336
+        },
+        "search": {
+          "status": 500,
+          "reason": "http_status",
+          "elapsed_ms": 341
+        }
+      }
+    },
+    {
+      "node": "https://node3.gonka.ai",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 326,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 337
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 311
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 324
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 338
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 328
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 352
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 318
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 291
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 439
+        }
+      }
+    },
+    {
+      "node": "https://rpc.gonka.gg",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 351,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 321
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 327
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 354
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 351
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 385
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 337
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 301
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 580
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 570
+        }
+      }
+    },
+    {
+      "node": "http://47.236.19.22:18000",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 384,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 391
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 368
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 372
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 376
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 398
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 389
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 380
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 379
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 569
+        }
+      }
+    },
+    {
+      "node": "http://36.189.234.237:17241",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 647,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 675
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 649
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 575
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 558
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 587
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 566
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 637
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 586
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 992
+        }
+      }
+    },
+    {
+      "node": "http://gonka.spv.re:8000",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 821,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:06.970931335Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 463
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 415
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 426
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 437
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 422
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 442
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 427
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 434
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 706
+        }
+      }
+    },
+    {
+      "node": "http://node1.gonka.ai:8000",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 232,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:12.604829992Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 236
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 231
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 239
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 232
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 249
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 241
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 240
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 245
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 347
+        }
+      }
+    },
+    {
+      "node": "http://node2.gonka.ai:8000",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 232,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "off",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:23:12.604829992Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 205
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 217
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 230
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 246
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 254
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 215
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 221
+        },
+        "history": {
+          "status": 500,
+          "reason": "http_status",
+          "elapsed_ms": 222
+        },
+        "search": {
+          "status": 500,
+          "reason": "http_status",
+          "elapsed_ms": 233
+        }
+      }
+    },
+    {
+      "node": "https://gonka.gg",
+      "checks": {
+        "status": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 887,
+          "chain_id": "gonka-mainnet",
+          "tx_index": "on",
+          "catching_up": false,
+          "block_time": "2026-11-01T12:24:51.415357267Z"
+        },
+        "epoch": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 606
+        },
+        "contract_info": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 455
+        },
+        "config": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 513
+        },
+        "state": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 652
+        },
+        "registry": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 488
+        },
+        "registration": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 470
+        },
+        "recipient": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 452
+        },
+        "history": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 465
+        },
+        "search": {
+          "status": 200,
+          "reason": null,
+          "elapsed_ms": 598
+        }
+      }
+    }
+  ],
+  "note": "Local read-only HTTP/JSON checks, not Cloud Run reachability or proof of historical completeness. Alternative ports and gateways may share backend nodes."
+}

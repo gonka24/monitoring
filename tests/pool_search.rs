@@ -122,23 +122,32 @@ async fn rejects_legacy_cursor_in_pool_and_does_not_retry_invalid_input() -> Tes
 #[tokio::test]
 async fn caps_attempts_and_returns_unavailable_when_all_candidates_fail() -> TestResult {
     let mut nodes = Vec::new();
-    for _ in 0..4 {
+    for _ in 0..10 {
         let node = Mock::new(vec![]).await?;
         node.node.mode.store(1, Ordering::Relaxed);
         nodes.push(node);
     }
     let app = app(&nodes.iter().collect::<Vec<_>>())?;
     assert_eq!(search(&app, None).await?.0, 503);
-    assert_eq!(
-        calls(&nodes[3]),
-        Vec::<String>::new(),
-        "only three attempts per request"
-    );
-    assert_eq!(search(&app, None).await?.0, 503);
-    assert_eq!(calls(&nodes[3]), vec!["status"]);
     assert_eq!(search(&app, None).await?.0, 503);
     for node in &nodes {
         assert_eq!(calls(node), vec!["status"]);
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn searches_tenth_node_after_nine_ineligible_nodes() -> TestResult {
+    let mut nodes = Vec::new();
+    for _ in 0..9 {
+        let node = Mock::new(vec![]).await?;
+        node.node.mode.store(1, Ordering::Relaxed);
+        nodes.push(node);
+    }
+    nodes.push(Mock::new(vec![record(42, 10, None)]).await?);
+    let app = app(&nodes.iter().collect::<Vec<_>>())?;
+    let (status, result) = search(&app, None).await?;
+    assert_eq!(status, 200, "{result}");
+    assert_eq!(result["deals"][0]["address"], address(42));
     Ok(())
 }

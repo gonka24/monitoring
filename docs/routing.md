@@ -5,11 +5,14 @@ parameters are accepted. `deal` must be a canonical lowercase Gonka Bech32
 account/contract address (20 or 32 bytes); a non-contract fails identity checks.
 This endpoint is independent of the background collector and its cached state.
 
-The service pins `mainnet-v1` and its first node, using that node's `/chain-api`
-and `/chain-rpc` together. Legacy `GONKA_REST_URL` / `GONKA_RPC_URL` configure the
-collector/search only. Routing node selection is server-side, never an HTTP input.
-Library users may construct a validated `RoutingDeployment` and select a node
-from its pinned list. There is no failover in this version.
+The service pins the `mainnet-v1` chain and contract identities. In pool mode,
+operator-configured nodes from `GONKA_NODES_FILE` or `GONKA_NODE_URLS` replace
+only the origin allowlist. Each observation stays on one origin for both
+`/chain-api` and `/chain-rpc`; upstream failures restart the entire observation
+on another node (3 seconds per attempt, 12 seconds total). Routing health is
+independent of transaction indexing. Identity/registration/routing validation
+failures are returned without failover. Legacy mode and `RoutingClient::new`
+retain the single pinned origin. See [node pool](node-pool.md).
 
 ## Response
 

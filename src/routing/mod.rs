@@ -103,6 +103,7 @@ pub struct RoutingClient {
     deployment: Arc<RoutingDeployment>,
     node: String,
     transport: Arc<dyn RoutingTransport>,
+    pool: Option<crate::pool::NodePool>,
     pub(super) capacity: Arc<tokio::sync::Semaphore>,
 }
 
@@ -130,8 +131,29 @@ impl RoutingClient {
             deployment: Arc::new(deployment),
             node: node.into(),
             transport,
+            pool: None,
             capacity: Arc::new(tokio::sync::Semaphore::new(8)),
         })
+    }
+
+    /// Uses operator-configured nodes, retaining all chain and contract identity pins.
+    /// Each failover restarts the complete observation on one origin.
+    /// # Errors
+    /// Rejects invalid deployment pins or an empty pool.
+    pub fn with_pool(
+        mut deployment: RoutingDeployment,
+        pool: crate::pool::NodePool,
+        transport: Arc<dyn RoutingTransport>,
+    ) -> Result<Self, RoutingError> {
+        deployment.nodes = pool.bases();
+        let node = deployment
+            .nodes
+            .first()
+            .ok_or(RoutingError::InvalidDeployment)?
+            .clone();
+        let mut client = Self::new(deployment, &node, transport)?;
+        client.pool = Some(pool);
+        Ok(client)
     }
 
     /// One live observation with at most one full retry after an epoch transition.
@@ -155,8 +177,46 @@ impl RoutingClient {
         tokio::select! {
             biased;
             () = options.cancellation.cancelled() => Err(RoutingError::Aborted),
-            result = tokio::time::timeout_at(deadline, self.observe(deal)) => result.map_err(|_| RoutingError::RpcTimeout)?,
+            result = tokio::time::timeout_at(deadline, self.dispatch(deal)) => result.map_err(|_| RoutingError::RpcTimeout)?,
         }
+    }
+
+    async fn dispatch(&self, deal: &str) -> Result<DealRoutingResult, RoutingError> {
+        let Some(pool) = &self.pool else {
+            return self.observe(deal).await;
+        };
+        let mut tried = Vec::new();
+        let mut last = RoutingError::RpcUnavailable;
+        for _ in 0..pool.len() {
+            let Some(lease) = pool.acquire_routing(&tried) else {
+                break;
+            };
+            tried.push(lease.index);
+            let mut worker = self.clone();
+            worker.pool = None;
+            worker.node = lease.id().to_owned();
+            let result = tokio::time::timeout(Duration::from_secs(3), worker.observe(deal))
+                .await
+                .unwrap_or(Err(RoutingError::RpcTimeout));
+            // Semantic failures must remain visible; do not shop across nodes for
+            // a more favourable identity or registration result.
+            let retry = matches!(
+                result,
+                Err(RoutingError::RpcError
+                    | RoutingError::RpcUnavailable
+                    | RoutingError::RpcTimeout
+                    | RoutingError::Incomplete
+                    | RoutingError::StaleRpc
+                    | RoutingError::WrongChain
+                    | RoutingError::ObservationChanged)
+            );
+            lease.finish(!retry);
+            if !retry {
+                return result;
+            }
+            last = result.err().unwrap_or(RoutingError::RpcUnavailable);
+        }
+        Err(last)
     }
 
     async fn get(&self, path: &str) -> Result<Value, RoutingError> {
