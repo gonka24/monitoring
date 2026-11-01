@@ -10,7 +10,7 @@ use tokio::time::{Duration, Instant};
 pub struct NodePool(Arc<Inner>);
 struct Inner {
     nodes: Vec<Node>,
-    health: Mutex<Vec<Health>>,
+    health: Mutex<Vec<[Health; 2]>>,
 }
 struct Node {
     id: String,
@@ -27,16 +27,17 @@ struct Health {
 pub(crate) struct Lease {
     pool: NodePool,
     pub index: usize,
+    capability: usize,
     started: Instant,
 }
 impl NodePool {
-    /// Creates a pool of 1–16 trusted HTTP(S) base URLs, without credentials or queries.
+    /// Creates a pool of 1–64 trusted HTTP(S) base URLs, without credentials or queries.
     /// Node discovery is deliberately outside the request path.
     /// # Errors
     /// Rejects malformed/duplicate URLs and HTTP client initialization failures.
     pub fn new(bases: &[String]) -> Result<Self, Box<dyn std::error::Error>> {
-        if bases.is_empty() || bases.len() > 16 {
-            return Err("GONKA_NODE_URLS must contain 1 to 16 nodes".into());
+        if bases.is_empty() || bases.len() > 64 {
+            return Err("Node configuration must contain 1 to 64 nodes".into());
         }
         let mut nodes = Vec::new();
         for base in bases {
@@ -61,15 +62,37 @@ impl NodePool {
                 id,
             });
         }
-        let health = Mutex::new((0..nodes.len()).map(|_| Health::default()).collect());
+        let health = Mutex::new((0..nodes.len()).map(|_| Default::default()).collect());
         Ok(Self(Arc::new(Inner { nodes, health })))
     }
 
     pub(crate) fn acquire(&self, pinned: Option<&str>, tried: &[usize]) -> Option<Lease> {
+        self.acquire_for(pinned, tried, 0)
+    }
+
+    pub(crate) fn acquire_routing(&self, tried: &[usize]) -> Option<Lease> {
+        self.acquire_for(None, tried, 1)
+    }
+
+    pub(crate) fn bases(&self) -> Vec<String> {
+        self.0.nodes.iter().map(|node| node.id.clone()).collect()
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.0.nodes.len()
+    }
+
+    fn acquire_for(
+        &self,
+        pinned: Option<&str>,
+        tried: &[usize],
+        capability: usize,
+    ) -> Option<Lease> {
         let mut health = self.0.health.lock().ok()?;
         let now = Instant::now();
         let index = health
             .iter()
+            .map(|health| &health[capability])
             .enumerate()
             .filter(|(i, h)| {
                 !tried.contains(i)
@@ -78,10 +101,11 @@ impl NodePool {
             })
             .min_by_key(|(_, h)| (h.active, h.latency_ms))?
             .0;
-        health[index].active += 1;
+        health[index][capability].active += 1;
         Some(Lease {
             pool: self.clone(),
             index,
+            capability,
             started: now,
         })
     }
@@ -94,8 +118,14 @@ impl NodePool {
     /// # Errors
     /// Returns an upstream error if no node succeeds within the bounded attempts.
     pub async fn collect(&self) -> Result<crate::cache::Snapshot, ChainError> {
+        tokio::time::timeout(Duration::from_secs(50), self.collect_inner())
+            .await
+            .unwrap_or(Err(ChainError::Upstream))
+    }
+
+    async fn collect_inner(&self) -> Result<crate::cache::Snapshot, ChainError> {
         let mut tried = Vec::new();
-        for _ in 0..3 {
+        for _ in 0..self.len() {
             let Some(lease) = self.acquire(None, &tried) else {
                 break;
             };
@@ -126,7 +156,7 @@ impl Lease {
     }
     pub fn finish(&self, success: bool) {
         if let Ok(mut health) = self.pool.0.health.lock() {
-            let h = &mut health[self.index];
+            let h = &mut health[self.index][self.capability];
             if success {
                 let elapsed = u64::try_from(self.started.elapsed().as_millis())
                     .unwrap_or(u64::MAX)
@@ -151,7 +181,8 @@ impl Lease {
 impl Drop for Lease {
     fn drop(&mut self) {
         if let Ok(mut health) = self.pool.0.health.lock() {
-            health[self.index].active = health[self.index].active.saturating_sub(1);
+            let h = &mut health[self.index][self.capability];
+            h.active = h.active.saturating_sub(1);
         }
     }
 }
@@ -189,7 +220,7 @@ mod tests {
         assert_eq!(faster.index, 0);
         drop(faster); // Cancellation releases load without changing health.
         let health = pool.0.health.lock().map_err(|e| e.to_string())?;
-        assert!(health.iter().all(|h| h.active == 0));
+        assert!(health.iter().flatten().all(|h| h.active == 0));
         Ok(())
     }
     #[tokio::test(start_paused = true)]
@@ -224,9 +255,26 @@ mod tests {
             vec!["file:///tmp/node".into()],
             vec!["https://example.com/chain-rpc".into()],
             vec!["https://example.com".into(), "https://example.com/".into()],
-            vec!["https://example.com".into(); 17],
+            vec!["https://example.com".into(); 65],
         ] {
             assert!(NodePool::new(&urls).is_err());
         }
+    }
+
+    #[tokio::test]
+    async fn indexed_failure_does_not_exclude_routing_and_inventory_supports_64_nodes() -> TestResult
+    {
+        let urls = (1..=64)
+            .map(|i| format!("https://node{i}.example.org"))
+            .collect::<Vec<_>>();
+        let pool = NodePool::new(&urls)?;
+        let indexed = pool.acquire(Some(&urls[0]), &[]).ok_or("indexed lease")?;
+        indexed.finish(false);
+        drop(indexed);
+        assert!(pool.acquire(Some(&urls[0]), &[]).is_none());
+        let routing = pool.acquire_routing(&[]).ok_or("routing lease")?;
+        assert_eq!(routing.index, 0);
+        routing.finish(true);
+        Ok(())
     }
 }

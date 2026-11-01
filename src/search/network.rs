@@ -75,7 +75,7 @@ impl NetworkSearch {
             return Err(SearchError::InvalidCursor);
         }
         let mut tried = Vec::new();
-        for _ in 0..3 {
+        for _ in 0..pool.len() {
             let Some(lease) = pool.acquire(pinned.as_deref(), &tried) else {
                 break;
             };

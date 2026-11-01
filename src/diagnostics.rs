@@ -16,10 +16,6 @@ pub(crate) fn pool_failure(index: usize) {
     eprintln!("{entry}");
 }
 
-pub(crate) fn http_status(operation: &str, status: u16) {
-    eprintln!("{}", record(operation, "http_status", Some(status)));
-}
-
 fn request_record(operation: &str, error: &reqwest::Error) -> Value {
     let reason = if error.is_timeout() {
         "timeout"
@@ -39,9 +35,71 @@ pub(crate) fn request_error(operation: &str, error: &reqwest::Error) {
     eprintln!("{}", request_record(operation, error));
 }
 
+/// Only fixed endpoint labels and the hostname survive; never log a raw URL.
+fn routing_record(url: &str, elapsed_ms: u128, mut entry: Value) -> Value {
+    if let Ok(url) = reqwest::Url::parse(url) {
+        entry["upstream_host"] = json!(url.host_str());
+        entry["upstream_port"] = json!(url.port_or_known_default());
+        let path = url.path();
+        entry["endpoint"] = json!(match path {
+            "/chain-rpc/status" => "status",
+            "/chain-api/productscience/inference/inference/get_current_epoch" => "epoch",
+            _ if path.starts_with("/chain-api/cosmwasm/wasm/v1/contract/") => {
+                if path.contains("/smart/") {
+                    "contract_smart"
+                } else {
+                    "contract_info"
+                }
+            }
+            _ if path.starts_with(
+                "/chain-api/productscience/inference/inference/list_claim_recipients/"
+            ) =>
+                "claim_recipients",
+            _ => "other",
+        });
+    }
+    entry["elapsed_ms"] = json!(elapsed_ms);
+    entry
+}
+
+pub(crate) fn routing_http_status(url: &str, elapsed_ms: u128, status: u16) {
+    eprintln!(
+        "{}",
+        routing_record(
+            url,
+            elapsed_ms,
+            record("routing.http", "http_status", Some(status))
+        )
+    );
+}
+
+pub(crate) fn routing_request_error(url: &str, elapsed_ms: u128, error: &reqwest::Error) {
+    eprintln!(
+        "{}",
+        routing_record(url, elapsed_ms, request_record("routing.http", error))
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn routing_context_redacts_credentials_queries_and_dynamic_paths() {
+        let entry = routing_record(
+            "https://user:secret@node1.gonka.ai:8443/chain-api/cosmwasm/wasm/v1/contract/private-address/smart/private-message?token=private-token",
+            250,
+            record("routing.http", "http_status", Some(503)),
+        );
+        assert_eq!(entry["upstream_host"], "node1.gonka.ai");
+        assert_eq!(entry["upstream_port"], 8443);
+        assert_eq!(entry["endpoint"], "contract_smart");
+        assert_eq!(entry["elapsed_ms"], 250);
+        let encoded = entry.to_string();
+        for sensitive in ["user", "secret", "private", "token"] {
+            assert!(!encoded.contains(sensitive));
+        }
+    }
 
     #[tokio::test]
     async fn classifies_http_and_decode_errors_without_leaking_request_data()

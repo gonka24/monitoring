@@ -2,6 +2,20 @@ use monitoring::{config::DealConfig, factory};
 use serde_json::Value;
 
 #[test]
+fn shipped_inventory_contains_at_least_ten_valid_origins() -> Result<(), Box<dyn std::error::Error>>
+{
+    let config: monitoring::config::NodeConfig =
+        serde_json::from_str(include_str!("../config/nodes.json"))?;
+    assert!(config.nodes.len() >= 10);
+    monitoring::pool::NodePool::new(&config.nodes)?;
+    assert!(
+        serde_json::from_str::<monitoring::config::NodeConfig>(r#"{"nodes":[],"typo":true}"#)
+            .is_err()
+    );
+    Ok(())
+}
+
+#[test]
 fn reads_live_conditions_without_rounding() -> Result<(), serde_json::Error> {
     let response: Value = serde_json::from_str(include_str!("fixtures/deal-config.json"))?;
     let config: DealConfig = serde_json::from_value(response["data"].clone())?;

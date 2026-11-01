@@ -6,7 +6,9 @@ RUN cargo build --locked --release
 
 FROM debian:bookworm-slim
 COPY --from=builder /app/target/release/monitoring /usr/local/bin/monitoring
+COPY config/nodes.json /app/config/nodes.json
 USER 65532:65532
 ENV PORT=8080
+ENV GONKA_NODES_FILE=/app/config/nodes.json
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/monitoring"]

@@ -18,7 +18,7 @@ Workflow `Rust` проверяет код в pull request и при push в `mai
 на сервисе, Artifact Registry Writer на Docker-репозитории и Service Account User
 на аккаунте приложения. Сервис и OIDC создаются заранее администратором.
 
-CI задаёт `GONKA_NODE_URLS` для пула node1:8443 + node3:443;
+CI задаёт `GONKA_NODES_FILE=/app/config/nodes.json` для общего пула;
 [поведение, миграция курсоров и откат](node-pool.md).
 CI не меняет IAM или публичный доступ. После первого деплоя администратор
 открывает доступ к API отдельно. URL и образ выводятся в Actions Summary.

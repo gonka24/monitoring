@@ -670,3 +670,160 @@ async fn actual_http_transport_rejects_http_and_json_failures() -> TestResult {
     server.abort();
     Ok(())
 }
+
+struct MultiNode(Vec<(String, Arc<Mock>)>);
+impl RoutingTransport for MultiNode {
+    fn get<'a>(
+        &'a self,
+        url: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + 'a>> {
+        Box::pin(async move {
+            let (_, transport) = self
+                .0
+                .iter()
+                .find(|(base, _)| url.starts_with(&format!("{base}/")))
+                .ok_or(Error::RpcUnavailable)?;
+            transport.get(url).await
+        })
+    }
+}
+
+#[tokio::test]
+async fn pooled_routing_restarts_every_stage_and_reaches_tenth_node() -> TestResult {
+    let bases: Vec<String> = (1..=10)
+        .map(|i| format!("https://node{i}.example.org"))
+        .collect();
+    let mut mocks = Vec::new();
+    for (i, base) in bases.iter().enumerate() {
+        let mut steps = attempt(443, 442, json!([{"epoch":"442","recipient":DEAL}]));
+        if i < 9 {
+            // Fail at status, epoch, identity, registration or recipient. Any
+            // successful partial reads must be discarded before the next node.
+            let stage = i % 6;
+            steps.truncate(stage + 1);
+            steps[stage].reply = Err(Error::RpcError);
+        } else {
+            // Routing does not require transaction indexing.
+            body(&mut steps, 0)["result"]["node_info"]["other"]["tx_index"] = json!("off");
+        }
+        mocks.push((
+            base.clone(),
+            Arc::new(Mock {
+                node: Some(base.clone()),
+                steps: Mutex::new(steps.into()),
+                ..Mock::default()
+            }),
+        ));
+    }
+    let transport = Arc::new(MultiNode(mocks));
+    let pool = monitoring::pool::NodePool::new(&bases)?;
+    let client = RoutingClient::with_pool(RoutingDeployment::mainnet()?, pool, transport.clone())?;
+    let result = client
+        .get_deal_routing(DEAL, RoutingOptions::default())
+        .await?;
+    assert_eq!(result.state, State::Configured);
+    assert_eq!(result.evidence.node, bases[9]);
+    for (_, mock) in &transport.0 {
+        assert!(mock.steps.lock().map_err(|e| e.to_string())?.is_empty());
+    }
+    // All failed nodes are in cooldown. Only the successful node receives reads.
+    transport.0[9]
+        .1
+        .steps
+        .lock()
+        .map_err(|e| e.to_string())?
+        .extend(attempt(443, 442, json!([])));
+    let second = client
+        .get_deal_routing(DEAL, RoutingOptions::default())
+        .await?;
+    assert_eq!(second.evidence.node, bases[9]);
+    assert_eq!(second.state, State::HistoryUnknown);
+    Ok(())
+}
+
+#[tokio::test]
+async fn pooled_routing_does_not_retry_identity_mismatch() -> TestResult {
+    let bases: Vec<String> = vec![
+        "https://first.example.org".into(),
+        "https://second.example.org".into(),
+    ];
+    let mut steps = attempt(443, 442, json!([]));
+    body(&mut steps, 2)["contract_info"]["code_id"] = json!("999");
+    steps.truncate(4);
+    let first = Arc::new(Mock {
+        node: Some(bases[0].clone()),
+        steps: Mutex::new(steps.into()),
+        ..Mock::default()
+    });
+    let second = Arc::new(Mock {
+        node: Some(bases[1].clone()),
+        ..Mock::default()
+    });
+    let transport = Arc::new(MultiNode(vec![
+        (bases[0].clone(), first),
+        (bases[1].clone(), second.clone()),
+    ]));
+    let client = RoutingClient::with_pool(
+        RoutingDeployment::mainnet()?,
+        monitoring::pool::NodePool::new(&bases)?,
+        transport,
+    )?;
+    assert_eq!(
+        client
+            .get_deal_routing(DEAL, RoutingOptions::default())
+            .await,
+        Err(Error::DealMismatch)
+    );
+    assert_eq!(second.calls.load(Ordering::SeqCst), 0);
+    Ok(())
+}
+
+#[tokio::test(start_paused = true)]
+async fn pooled_routing_times_out_slow_node_then_restarts_and_cancels_cleanly() -> TestResult {
+    let bases: Vec<String> = vec![
+        "https://slow.example.org".into(),
+        "https://fast.example.org".into(),
+    ];
+    let mut slow_steps = attempt(443, 442, json!([]));
+    slow_steps.truncate(1);
+    slow_steps[0].delay = Duration::from_secs(60);
+    let slow = Arc::new(Mock {
+        node: Some(bases[0].clone()),
+        steps: Mutex::new(slow_steps.into()),
+        ..Mock::default()
+    });
+    let fast = Arc::new(Mock {
+        node: Some(bases[1].clone()),
+        steps: Mutex::new(attempt(443, 442, json!([])).into()),
+        ..Mock::default()
+    });
+    let pool = monitoring::pool::NodePool::new(&bases)?;
+    let transport = Arc::new(MultiNode(vec![
+        (bases[0].clone(), slow.clone()),
+        (bases[1].clone(), fast.clone()),
+    ]));
+    let client = RoutingClient::with_pool(RoutingDeployment::mainnet()?, pool, transport)?;
+    let result = client
+        .get_deal_routing(DEAL, RoutingOptions::default())
+        .await?;
+    assert_eq!(result.evidence.node, bases[1]);
+    assert_eq!(slow.active.load(Ordering::SeqCst), 0);
+    let mut waiting = attempt(443, 442, json!([]));
+    waiting[0].delay = Duration::from_secs(60);
+    fast.steps
+        .lock()
+        .map_err(|e| e.to_string())?
+        .extend(waiting);
+    let options = RoutingOptions::default();
+    let token = options.cancellation.clone();
+    let operation = client.get_deal_routing(DEAL, options);
+    tokio::pin!(operation);
+    tokio::select! {
+        result = &mut operation => panic!("finished early: {result:?}"),
+        () = tokio::time::sleep(Duration::from_millis(100)) => {}
+    }
+    token.cancel();
+    assert_eq!(operation.await, Err(Error::Aborted));
+    assert_eq!(fast.active.load(Ordering::SeqCst), 0);
+    Ok(())
+}
